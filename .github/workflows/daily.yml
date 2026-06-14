@@ -1,13 +1,16 @@
-name: 每日世界盃預測自動鬧鐘
+name: 每日世界盃預測
 
 on:
   schedule:
-    - cron: '0 23 * * *'      # 香港時間每天早上 07:00 運行
-  workflow_dispatch:
+    - cron: '0 0 * * *'     # 香港時間每日早上 8:00
+  workflow_dispatch:        # 允許手動測試
 
 jobs:
   predict:
     runs-on: ubuntu-latest
+    
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +26,6 @@ jobs:
       - name: 執行世界盃預測
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHANNEL_ID: "@my_ball_predict_3034"
+          CHANNEL_ID: "-1003860795845"
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
         run: python predict.py
