@@ -1,31 +1,30 @@
-name: 每日世界盃預測
+name: Daily Football Predict Bot
 
 on:
   schedule:
-    - cron: '0 0 * * *'     # 香港時間每日早上 8:00
-  workflow_dispatch:        # 允許手動測試
+    - cron: '0 23 * * *'
+  workflow_dispatch: 
 
 jobs:
-  predict:
+  run-bot:
     runs-on: ubuntu-latest
-    
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: 設定 Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: 安裝套件
-        run: pip install requests
-      
-      - name: 執行世界盃預測
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHANNEL_ID: "-1003860795845"
-          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-        run: python predict.py
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests google-genai
+
+    - name: Run prediction script
+      run: python predict.py
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
