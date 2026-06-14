@@ -1,0 +1,31 @@
+name: 每日世界盃預測
+
+on:
+  schedule:
+    - cron: '0 0 * * *'     # 香港時間每日早上 8:00
+  workflow_dispatch:        # 允許手動測試
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 安裝套件
+        run: pip install requests
+      
+      - name: 執行世界盃預測
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: "-1003860795845"
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+        run: python predict.py
