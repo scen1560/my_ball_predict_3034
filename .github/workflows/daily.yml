@@ -1,28 +1,35 @@
-name: 每日世界盃預測自動鬧鐘
-
-on:
-  schedule:
-    - cron: '0 0 * * *'        # 香港時間每天早上 8:00 自動運行
-  workflow_dispatch:           # 允許你隨時手動點擊運行測試
-
-jobs:
-  predict:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: 設定 Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: 安裝所需套件
-        run: pip install requests
-      
-      - name: 執行世界盃預測
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHANNEL_ID: "@my_ball_predict_3034"
-          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-        run: python predict.py
+def get_today_worldcup_matches():
+    print("🔄 抓取香港時間 07:00 至 明日07:00 的世界盃賽程...")
+    url = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
+    try:
+        response = requests.get(url, timeout=15)
+        data = response.json()
+        
+        now = datetime.now()
+        today_7am = now.replace(hour=7, minute=0, second=0, microsecond=0)
+        tomorrow_7am = today_7am + timedelta(days=1)
+        
+        matches_today = []
+        for match in data.get("matches", []):
+            try:
+                match_date = datetime.strptime(match.get("date", ""), "%Y-%m-%d")
+                match_time = match.get("time", "00:00")
+                # 簡單比對日期範圍
+                if today_7am.date() <= match_date.date() <= tomorrow_7am.date():
+                    matches_today.append({
+                        "home": match.get("team1", "未知"),
+                        "away": match.get("team2", "未知"),
+                        "date": match.get("date"),
+                        "time": match_time
+                    })
+            except:
+                continue
+        
+        if matches_today:
+            print(f"✅ 找到 {len(matches_today)} 場比賽")
+            return matches_today[:2]  # 最多發 2 場
+    except Exception as e:
+        print(f"⚠️ 賽程抓取失敗: {e}")
+    
+    # 備用測試
+    return [{"home": "Germany", "away": "Japan"}]
