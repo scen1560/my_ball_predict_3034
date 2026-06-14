@@ -1,0 +1,28 @@
+name: 每日世界盃預測自動鬧鐘
+
+on:
+  schedule:
+    - cron: '0 0 * * *'        # 香港時間每天早上 8:00 自動運行
+  workflow_dispatch:           # 允許你隨時手動點擊運行測試
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 安裝所需套件
+        run: pip install requests
+      
+      - name: 執行世界盃預測
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: "@my_ball_predict_3034"
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+        run: python predict.py
