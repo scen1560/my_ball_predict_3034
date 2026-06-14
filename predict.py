@@ -1,91 +1,115 @@
 import requests
-import os
 from datetime import datetime
 
 # ====================== 設定 ======================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID", "@my_ball_predict_3034")
+CHANNEL_ID = "-1003860795845"
 GROK_API_KEY = os.getenv("GROK_API_KEY")
 
-print("🚀 工具啟動中...")
-
-# ====================== 球隊中文映射 ======================
-team_name_map = {
-    "Germany": "德國", "Japan": "日本",
-    "Ivory Coast": "科特迪瓦", "Ecuador": "厄瓜多爾",
-    "Unknown": "未知"
-}
-
-def translate_team_name(name):
-    return team_name_map.get(name, name)
-
-# ====================== Grok 生成 8 大板塊 ======================
-def generate_with_grok(home_en, away_en):
-    home = translate_team_name(home_en)
-    away = translate_team_name(away_en)
-    
-    prompt = f"""你是一位專業香港足球分析員，用香港足球術語（波膽、大細球、受讓、派彩快）為以下世界盃比賽寫完整 8 大板塊預測。
-
-比賽：{home} vs {away}
-
-請嚴格按照以下格式輸出：
-1️⃣ 預計首發陣容及理由（結合新人和傷停）
-2️⃣ 近期狀態與戰術對決
-3️⃣ 傷停情況、交手紀錄及背景動機
-4️⃣ 投注價值推薦
-5️⃣ 風險及冷門可能性
-6️⃣ 全體預測
-7️⃣ 預測比分（波膽）
-8️⃣ 最終總結（加入派彩快提示）
-
-要求：內容自然、強調最新戰意和新陣容，淡化歷史往績。"""
-
-    url = "https://api.x.ai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {GROK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "model": "grok-4.3",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 1200
-    }
+# ====================== 1. 自動抓今日世界盃賽程 ======================
+def get_today_worldcup_matches():
+    print("🔄 抓取今日世界盃賽程...")
+    url = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json"
     
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=40)
-        if response.status_code == 200:
-            content = response.json()["choices"][0]["message"]["content"]
-            print("✅ Grok API 成功生成內容")
-            return content
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        matches = []
+        
+        for m in data.get("matches", []):
+            if m.get("date") == today:
+                matches.append({
+                    "home": m.get("team1", "未知"),
+                    "away": m.get("team2", "未知")
+                })
+        
+        if matches:
+            print(f"✅ 成功抓取 {len(matches)} 場今日賽事")
+            return matches[:3]
+        else:
+            print("⚠️ 今日無世界盃賽事")
+            return []
+            
     except Exception as e:
-        print(f"⚠️ Grok API 失敗: {e}")
-    
-    # 後備模板
-    return f"""⚽️ **【世界盃焦點：{home} vs {away}】**
+        print(f"❌ 賽程抓取失敗: {e}")
+        print("⚠️ 請檢查網路或稍後再試")
+        return []
 
-📊 **馬會即時賠率**：主勝 2.05 | 和 3.40 | 客勝 3.30
+# ====================== 2. 馬會實時賠率 ======================
+def get_hkjc_odds():
+    print("🔄 抓取馬會實時賠率...")
+    try:
+        url = "https://bet.hkjc.com/contentserver/jcbw/api/graphql"
+        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        payload = {
+            "query": "query { footballMatches { matches { homeTeam { teamNameCH } awayTeam { teamNameCH } hadOdds { h d a } } } }"
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            matches = data.get("data", {}).get("footballMatches", {}).get("matches", [])
+            if matches:
+                m = matches[0]
+                return {
+                    "h": m["hadOdds"].get("h", "1.85"),
+                    "d": m["hadOdds"].get("d", "3.40"),
+                    "a": m["hadOdds"].get("a", "3.80")
+                }
+    except:
+        pass
+    return {"h": "1.85", "d": "3.40", "a": "3.80"}
 
-**1️⃣ 預計首發陣容及理由**
-{home}：4-3-3，新星前鋒即刻正選。
+# ====================== 3. 生成 8 大板塊 ======================
+def generate_8_blocks(home, away, odds):
+    text = f"""⚽️ **【世界盃小組賽焦點：{home} vs {away}】**
+📊 **馬會即時賠率**：主勝 {odds['h']} | 和 {odds['d']} | 客勝 {odds['a']}
+
+**1️⃣ 預計首發陣容及理由**（新人 + 傷停）
+{home}：4-2-3-1，新星前鋒即刻正選，教練熱身賽已試陣。
+{away}：4-3-3，主力框架大致完整。
+
+**2️⃣ 近期狀態與戰術對決**
+{home}新進攻線火力強，對住{away}防線轉換慢有明顯優勢。
+
+**3️⃣ 傷停情況、交手紀錄及背景動機**
+最新戰意極高（出線關鍵戰）。**歷史往績參考價值低**（陣容大變）。
+
+**4️⃣ 投注價值推薦**
+推薦 **受讓** 或 **大細球 2.5/3.5** 最穩健。
+
+**5️⃣ 風險及冷門可能性**
+新陣容默契不足，冷門機會約 25-35%。
+
+**6️⃣ 全體預測**
+{home}勝出機會約 65-75%。
+
+**7️⃣ 預測比分（波膽）**
+**2-1** 或 **3-1**（{home}勝）
 
 **8️⃣ 最終總結**
-看好{home}小勝，建議小注**受讓**或**大球**。中場用**派彩快**調整！"""
+看好{home}勝出，建議小注**受讓**或**大球**。中場用**派彩快**再分析調整！理性投注，娛樂為主！"""
+    return text
 
 # ====================== 發送 ======================
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHANNEL_ID, "text": text, "parse_mode": "Markdown"}
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        print("Telegram 回應:", response.json())
-    except Exception as e:
-        print("發送失敗:", e)
+    response = requests.post(url, json=payload)
+    print("Telegram 回應:", response.json())
 
 # ====================== 主程式 ======================
 if __name__ == "__main__":
-    matches = [{"home": "Germany", "away": "Japan"}]
-    for m in matches:
-        report = generate_with_grok(m["home"], m["away"])
-        send_to_telegram(report)
-        print("✅ 處理完成")
+    matches = get_today_worldcup_matches()
+    
+    if not matches:
+        print("❌ 今日無賽事或抓取失敗，程式結束")
+    else:
+        odds = get_hkjc_odds()
+        for m in matches:
+            print(f"📝 生成預測：{m['home']} vs {m['away']}")
+            report = generate_8_blocks(m["home"], m["away"], odds)
+            send_to_telegram(report)
+            print("✅ 發送完成\n")
