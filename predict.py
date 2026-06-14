@@ -6,7 +6,7 @@ import os
 # 1. 讀取保險箱密鑰
 # =====================================================================
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # <--- 讀取 Gemini 鎖匙
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY")
 CHANNEL_ID = "@my_ball_predict_3034"
 
@@ -17,16 +17,16 @@ def get_international_odds():
     print("🔄 正在啟動智能雷達，搜尋今日真實賽事...")
     
     if not ODDS_API_KEY:
-        print("❌ 錯誤：找不到 ODDS_API_KEY！")
+        print("❌ 錯誤：找不到 ODDS_API_KEY！請檢查 GitHub Secrets。")
         return None
 
     # 📡 聯賽搜尋名單
     SPORTS_TO_TRY = [
-        'soccer_fifa_world_cup',       # 世界盃
-        'soccer_conmebol_copa_america',# 美洲盃
-        'soccer_usa_mls',              # 美職聯
-        'soccer_japan_j_league',       # 日職聯
-        'soccer_epl'                   # 英超
+        'soccer_fifa_world_cup',
+        'soccer_conmebol_copa_america',
+        'soccer_usa_mls',
+        'soccer_japan_j_league',
+        'soccer_epl'
     ]
     
     for sport in SPORTS_TO_TRY:
@@ -88,7 +88,6 @@ def generate_report_with_gemini(match_info):
         print("❌ 錯誤：找不到 GEMINI_API_KEY！")
         return None
 
-    # 使用最新的 gemini-3.5-flash 模型 REST 端點
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     
@@ -120,14 +119,9 @@ def generate_report_with_gemini(match_info):
 8. 最終總結（加入溫馨提示：若半場形勢有暗湧，可使用「派彩快」提早走印鎖定利潤）
 """
 
-    # 配合 Gemini API 的 JSON 格式
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.3  # 低溫設定，防老作發夢
-        }
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.2} 
     }
 
     try:
