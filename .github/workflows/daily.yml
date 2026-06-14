@@ -2,9 +2,9 @@ name: Daily Football Predict Bot
 
 on:
   schedule:
-    # 香港時間每天早上 07:00 運行 (等於 UTC 前一晚 23:00)
+    # 香港時間每日早上 07:00 運行 (UTC 時間 23:00)
     - cron: '0 23 * * *'
-  workflow_dispatch: # 容許人手隨時撳掣測試
+  workflow_dispatch: # 容許隨時手動撳掣測試
 
 jobs:
   run-bot:
@@ -26,5 +26,7 @@ jobs:
     - name: Run prediction script
       run: python predict.py
       env:
+        # 將 GitHub 保險箱的三條鎖匙交給 Python
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        GROK_API_KEY: ${{ secrets.GROK_API_KEY }} # <--- 更換成 Grok 鎖匙
+        GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+        ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
