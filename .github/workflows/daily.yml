@@ -2,7 +2,7 @@ name: 每日世界盃預測自動鬧鐘
 
 on:
   schedule:
-    - cron: '0 23 * * *'      # 香港時間每天早上 07:00 運行
+    - cron: '0 23 * * *'     # 香港時間每天早上 07:00
   workflow_dispatch:
 
 jobs:
